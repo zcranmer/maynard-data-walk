@@ -1,0 +1,12 @@
+<<<<<<< HEAD
+streamlit
+pandas
+plotly
+plotly_express
+=======
+streamlit
+pandas
+plotly
+plotly_express
+>>>>>>> 59b44cba93002c460ac6f56facb2c4e5769cc17a
+openpyxl

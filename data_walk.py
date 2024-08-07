@@ -7,17 +7,15 @@ Created on Thu Jul 11 08:43:07 2024
 # code for Maynard Climate Resilience Data Walk
 """
 
-import os
 import numpy as np
 import pandas as pd
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import json
 
-#os.chdir()
-
-st.set_page_config(layout='wide',
+st.set_page_config(#layout='wide',
                    page_title='Maynard Climate Resilience Data Walk'
                    )
 
@@ -33,49 +31,137 @@ text_lang = st.radio('Choose your preferred language:',
 
 @st.cache_resource
 def load_data():
-    census_api_url = 'https://api.census.gov/data/2022/acs/acs5'
+    gdf = json.load(open('maynard_shapes.json'))
+    #print(gdf)
+    census_api_url = 'https://api.census.gov/data/2021/acs/acs5'
     geography = '&for=county%20subdivision:39625&in=state:25%20county:017'
+    bgs1 = '&for=block%20group:*&in=state:25%20county:017&in=tract:364101'
+    bgs2 = '&for=block%20group:*&in=state:25%20county:017&in=tract:364102'
+    
+    # dictionary for income columns
+    income_col_dict = {'[["B19001_001E"':'Total Households (Inc)',
+                       'B19001_001M':'Total Households (Inc) Margin of Error',
+                       'B19001_002E':'Less than $10,000',
+                       'B19001_002M':'Less than $10,000 Margin of Error',
+                       'B19001_003E':'$10,000 to $14,999',
+                       'B19001_003M':'$10,000 to $14,999 Margin of Error',
+                       'B19001_004E':'$15,000 to $19,999',
+                       'B19001_004M':'$15,000 to $19,999 Margin of Error',
+                       'B19001_005E':'$20,000 to $24,999',
+                       'B19001_005M':'$20,000 to $24,999 Margin of Error',
+                       'B19001_006E':'$25,000 to $29,999',
+                       'B19001_006M':'$25,000 to $29,999 Margin of Error',
+                       'B19001_007E':'$30,000 to $34,999',
+                       'B19001_007M':'$30,000 to $34,999 Margin of Error',
+                       'B19001_008E':'$35,000 to $39,999',
+                       'B19001_008M':'$35,000 to $39,999 Margin of Error',
+                       'B19001_009E':'$40,000 to $44,999',
+                       'B19001_009M':'$40,000 to $44,999 Margin of Error',
+                       'B19001_010E':'$45,000 to $49,999',
+                       'B19001_010M':'$45,000 to $49,999 Margin of Error',
+                       'B19001_011E':'$50,000 to $59,999',
+                       'B19001_011M':'$50,000 to $59,999 Margin of Error',
+                       'B19001_012E':'$60,000 to $74,999',
+                       'B19001_012M':'$60,000 to $74,999 Margin of Error',
+                       'B19001_013E':'$75,000 to $99,999',
+                       'B19001_013M':'$75,000 to $99,999 Margin of Error',
+                       'B19001_014E':'$100,000 to $124,999',
+                       'B19001_014M':'$100,000 to $124,999 Margin of Error',
+                       'B19001_015E':'$125,000 to $149,999',
+                       'B19001_015M':'$125,000 to $149,999 Margin of Error',
+                       'B19001_016E':'$150,000 to $199,999',
+                       'B19001_016M':'$150,000 to $199,999 Margin of Error',
+                       'B19001_017E':'$200,000 or more',
+                       'B19001_017M':'$200,000 or more Margin of Error'
+                       }
+    age_col_dict = {'S0101_C01_001E':'Total Population',
+                    'S0101_C01_001M':'Total Population Margin of Error',
+                    'S0101_C01_002E':'Under 5 years',
+                    'S0101_C01_002M':'Under 5 years Margin of Error',
+                    'S0101_C01_003E':'5 to 9 years',
+                    'S0101_C01_003M':'5 to 9 years Margin of Error',
+                    'S0101_C01_004E':'10 to 14 years',
+                    'S0101_C01_004M':'10 to 14 years Margin of Error',
+                    'S0101_C01_005E':'15 to 19 years',
+                    'S0101_C01_005M':'15 to 19 years Margin of Error',
+                    'S0101_C01_006E':'20 to 24 years',
+                    'S0101_C01_006M':'20 to 24 years Margin of Error',
+                    'S0101_C01_007E':'25 to 29 years',
+                    'S0101_C01_007M':'25 to 29 years Margin of Error',
+                    'S0101_C01_008E':'30 to 34 years',
+                    'S0101_C01_008M':'30 to 34 years Margin of Error',
+                    'S0101_C01_009E':'35 to 39 years',
+                    'S0101_C01_009M':'35 to 39 years Margin of Error',
+                    'S0101_C01_010E':'40 to 44 years',
+                    'S0101_C01_010M':'40 to 44 years Margin of Error',
+                    'S0101_C01_011E':'45 to 49 years',
+                    'S0101_C01_011M':'45 to 49 years Margin of Error',
+                    'S0101_C01_012E':'50 to 54 years',
+                    'S0101_C01_012M':'50 to 54 years Margin of Error',
+                    'S0101_C01_013E':'55 to 59 years',
+                    'S0101_C01_013M':'55 to 59 years Margin of Error',
+                    'S0101_C01_014E':'60 to 64 years',
+                    'S0101_C01_014M':'60 to 64 years Margin of Error',
+                    'S0101_C01_015E':'65 to 69 years',
+                    'S0101_C01_015M':'65 to 69 years Margin of Error',
+                    'S0101_C01_016E':'70 to 74 years',
+                    'S0101_C01_016M':'70 to 74 years Margin of Error',
+                    'S0101_C01_017E':'75 to 79 years',
+                    'S0101_C01_017M':'75 to 79 years Margin of Error',
+                    'S0101_C01_018E':'80 to 84 years',
+                    'S0101_C01_018M':'80 to 84 years Margin of Error',
+                    'S0101_C01_019E':'85 years and over',
+                    'S0101_C01_019M':'85 years and over Margin of Error',
+                    'S0101_C01_020E':'5 to 14 years',
+                    'S0101_C01_020M':'5 to 14 years Margin of Error',
+                    'S0101_C01_021E':'15 to 17 years',
+                    'S0101_C01_021M':'15 to 17 years Margin of Error',
+                    'S0101_C01_022E':'Under 18 years',
+                    'S0101_C01_022M':'Under 18 years Margin of Error',
+                    'S0101_C01_023E':'18 to 24 years',
+                    'S0101_C01_023M':'18 to 24 years Margin of Error',
+                    'S0101_C01_024E':'15 to 44 years',
+                    'S0101_C01_024M':'15 to 44 years Margin of Error',
+                    'S0101_C01_025E':'16 years and over',
+                    'S0101_C01_025M':'16 years and over Margin of Error',
+                    'S0101_C01_026E':'18 years and over',
+                    'S0101_C01_026M':'18 years and over Margin of Error',
+                    'S0101_C01_027E':'21 years and over',
+                    'S0101_C01_027M':'21 years and over Margin of Error',
+                    'S0101_C01_028E':'60 years and over',
+                    'S0101_C01_028M':'60 years and over Margin of Error',
+                    'S0101_C01_029E':'62 years and over',
+                    'S0101_C01_029M':'62 years and over Margin of Error',
+                    'S0101_C01_030E':'65 years and over',
+                    'S0101_C01_030M':'65 years and over Margin of Error',
+                    'S0101_C01_031E':'75 years and over',
+                    'S0101_C01_031M':'75 years and over Margin of Error',
+                    'S0101_C01_032E':'Median age (years)',
+                    'S0101_C01_032M':'Median age (years) Margin of Error',
+                    'S0101_C01_033E':'Sex ratio (males per 100 females)',
+                    'S0101_C01_033M':'Sex ratio (males per 100 females) Margin of Error',
+                    'S0101_C01_034E':'Age dependency ratio',
+                    'S0101_C01_034M':'Age dependency ratio Margin of Error',
+                    'S0101_C01_035E':'Old-age dependency ratio',
+                    'S0101_C01_035M':'Old-age dependency ratio Margin of Error',
+                    'S0101_C01_036E':'Child dependency ratio',
+                    'S0101_C01_036M':'Child dependency ratio Margin of Error'
+                    }
     
     # import data
+    incomebg_url1 = census_api_url+'?get=group(B19001)'+bgs1
+    incomebg_url2 = census_api_url+'?get=group(B19001)'+bgs2
+    incomebg_data = pd.concat([pd.read_csv(incomebg_url1),pd.read_csv(incomebg_url2)])
+    incomebg_data = incomebg_data.drop(columns=incomebg_data.columns[incomebg_data.columns.str.contains('A')])
+    incomebg_data = incomebg_data.drop(columns=['state','county'])
+    incomebg_data = incomebg_data.rename(columns=income_col_dict)
+    incomebg_data['Total Households (Inc)'] = incomebg_data['Total Households (Inc)'].str[2:-1]
+
     income_url = census_api_url+'?get=group(B19001)'+geography
     income_data = pd.read_csv(income_url)
     income_data = income_data.drop(columns=income_data.columns[income_data.columns.str.contains('A')])
     income_data = income_data.drop(columns=['GEO_ID','state','county','county subdivision]','Unnamed: 73'])
-    income_data = income_data.rename(columns={'[["B19001_001E"':'Total Households (Inc)',
-                                          'B19001_001M':'Total Households (Inc) Margin of Error',
-                                          'B19001_002E':'Less than $10,000',
-                                          'B19001_002M':'Less than $10,000 Margin of Error',
-                                          'B19001_003E':'$10,000 to $14,999',
-                                          'B19001_003M':'$10,000 to $14,999 Margin of Error',
-                                          'B19001_004E':'$15,000 to $19,999',
-                                          'B19001_004M':'$15,000 to $19,999 Margin of Error',
-                                          'B19001_005E':'$20,000 to $24,999',
-                                          'B19001_005M':'$20,000 to $24,999 Margin of Error',
-                                          'B19001_006E':'$25,000 to $29,999',
-                                          'B19001_006M':'$25,000 to $29,999 Margin of Error',
-                                          'B19001_007E':'$30,000 to $34,999',
-                                          'B19001_007M':'$30,000 to $34,999 Margin of Error',
-                                          'B19001_008E':'$35,000 to $39,999',
-                                          'B19001_008M':'$35,000 to $39,999 Margin of Error',
-                                          'B19001_009E':'$40,000 to $44,999',
-                                          'B19001_009M':'$40,000 to $44,999 Margin of Error',
-                                          'B19001_010E':'$45,000 to $49,999',
-                                          'B19001_010M':'$45,000 to $49,999 Margin of Error',
-                                          'B19001_011E':'$50,000 to $59,999',
-                                          'B19001_011M':'$50,000 to $59,999 Margin of Error',
-                                          'B19001_012E':'$60,000 to $74,999',
-                                          'B19001_012M':'$60,000 to $74,999 Margin of Error',
-                                          'B19001_013E':'$75,000 to $99,999',
-                                          'B19001_013M':'$75,000 to $99,999 Margin of Error',
-                                          'B19001_014E':'$100,000 to $124,999',
-                                          'B19001_014M':'$100,000 to $124,999 Margin of Error',
-                                          'B19001_015E':'$125,000 to $149,999',
-                                          'B19001_015M':'$125,000 to $149,999 Margin of Error',
-                                          'B19001_016E':'$150,000 to $199,999',
-                                          'B19001_016M':'$150,000 to $199,999 Margin of Error',
-                                          'B19001_017E':'$200,000 or more',
-                                          'B19001_017M':'$200,000 or more Margin of Error'
-                                          })
+    income_data = income_data.rename(columns=income_col_dict)
     income_data['Total Households (Inc)'] = income_data['Total Households (Inc)'].str[2:-1]
     income_data['Less than $25,000'] = income_data.loc[0,['Less than $10,000','$10,000 to $14,999','$15,000 to $19,999','$20,000 to $24,999']].sum()
     income_data['$25,000 to $49,999'] = income_data.loc[0,['$25,000 to $29,999','$30,000 to $34,999','$35,000 to $39,999','$40,000 to $44,999','$45,000 to $49,999']].sum()
@@ -105,6 +191,19 @@ def load_data():
     med_inc_data['Median Household Income'] = med_inc_data['Median Household Income'].str[2:-1].astype('int')
     med_inc_data = med_inc_data.drop(columns=['GEO_ID','state','county','county subdivision]','Unnamed: 9'])
     
+    med_incomebg1_url = census_api_url+'?get=group(B19013)'+bgs1
+    med_incomebg2_url = census_api_url+'?get=group(B19013)'+bgs2
+    med_incbg_data = pd.concat([pd.read_csv(med_incomebg1_url),
+                                pd.read_csv(med_incomebg2_url)])
+    med_incbg_data = med_incbg_data.drop(columns=med_incbg_data.columns[med_incbg_data.columns.str.contains('A')])
+    med_incbg_data = med_incbg_data.rename(columns={'[["B19013_001E"':'Median Household Income',
+                                                'B19013_001M':'MHI Margin of Error'})
+    med_incbg_data['Median Household Income'] = med_incbg_data['Median Household Income'].str[2:-1].astype('int')
+    med_incbg_data = med_incbg_data.drop(columns=['state','county'])
+    med_incbg_data = med_incbg_data.rename(columns={'GEO_ID':'GEOID'})
+    med_incbg_data['GEOID'] = med_incbg_data['GEOID'].str[9:]
+
+    
     med_income_hh_url = census_api_url+'?get=group(B19019)'+geography
     med_inc_hh_data = pd.read_csv(med_income_hh_url)
     med_inc_hh_data = med_inc_hh_data.drop(columns=med_inc_hh_data.columns[med_inc_hh_data.columns.str.contains('A')])
@@ -128,84 +227,25 @@ def load_data():
     med_inc_hh_data['Median Household Income by Household Size'] = med_inc_hh_data['Median Household Income by Household Size'].str[2:-1].astype('int')
     med_inc_hh_data = med_inc_hh_data.drop(columns=['GEO_ID','state','county','county subdivision]','Unnamed: 37'])
     
+    print(med_incbg_data['GEOID'])
+    print(gdf['features'][0]['properties'])
+    income_map = px.choropleth(med_incbg_data,geojson=gdf,locations='GEOID',
+                        featureidkey='properties.GEOID',
+                        color='Median Household Income',
+                        projection='mercator',
+                        labels={'Median Household Income':'Income ($)'}
+                        )
+    income_map.update_geos(fitbounds='locations',visible=False)
+    income_map.update_layout(height=300,width=600,
+                      margin={"r":0,"t":0,"l":0,"b":0}
+                      )
+    
     #S0101
     age_url = census_api_url+'/subject?get=group(S0101)'+geography
     age_data = pd.read_csv(age_url)
     age_data = age_data.drop(columns=age_data.columns[age_data.columns.str.contains('A')])
     age_data = age_data.drop(columns=['[["GEO_ID"','state','county','county subdivision]','Unnamed: 917'])
-    age_data = age_data.rename(columns={'S0101_C01_001E':'Total Population',
-                                        'S0101_C01_001M':'Total Population Margin of Error',
-                                        'S0101_C01_002E':'Under 5 years',
-                                        'S0101_C01_002M':'Under 5 years Margin of Error',
-                                        'S0101_C01_003E':'5 to 9 years',
-                                        'S0101_C01_003M':'5 to 9 years Margin of Error',
-                                        'S0101_C01_004E':'10 to 14 years',
-                                        'S0101_C01_004M':'10 to 14 years Margin of Error',
-                                        'S0101_C01_005E':'15 to 19 years',
-                                        'S0101_C01_005M':'15 to 19 years Margin of Error',
-                                        'S0101_C01_006E':'20 to 24 years',
-                                        'S0101_C01_006M':'20 to 24 years Margin of Error',
-                                        'S0101_C01_007E':'25 to 29 years',
-                                        'S0101_C01_007M':'25 to 29 years Margin of Error',
-                                        'S0101_C01_008E':'30 to 34 years',
-                                        'S0101_C01_008M':'30 to 34 years Margin of Error',
-                                        'S0101_C01_009E':'35 to 39 years',
-                                        'S0101_C01_009M':'35 to 39 years Margin of Error',
-                                        'S0101_C01_010E':'40 to 44 years',
-                                        'S0101_C01_010M':'40 to 44 years Margin of Error',
-                                        'S0101_C01_011E':'45 to 49 years',
-                                        'S0101_C01_011M':'45 to 49 years Margin of Error',
-                                        'S0101_C01_012E':'50 to 54 years',
-                                        'S0101_C01_012M':'50 to 54 years Margin of Error',
-                                        'S0101_C01_013E':'55 to 59 years',
-                                        'S0101_C01_013M':'55 to 59 years Margin of Error',
-                                        'S0101_C01_014E':'60 to 64 years',
-                                        'S0101_C01_014M':'60 to 64 years Margin of Error',
-                                        'S0101_C01_015E':'65 to 69 years',
-                                        'S0101_C01_015M':'65 to 69 years Margin of Error',
-                                        'S0101_C01_016E':'70 to 74 years',
-                                        'S0101_C01_016M':'70 to 74 years Margin of Error',
-                                        'S0101_C01_017E':'75 to 79 years',
-                                        'S0101_C01_017M':'75 to 79 years Margin of Error',
-                                        'S0101_C01_018E':'80 to 84 years',
-                                        'S0101_C01_018M':'80 to 84 years Margin of Error',
-                                        'S0101_C01_019E':'85 years and over',
-                                        'S0101_C01_019M':'85 years and over Margin of Error',
-                                        'S0101_C01_020E':'5 to 14 years',
-                                        'S0101_C01_020M':'5 to 14 years Margin of Error',
-                                        'S0101_C01_021E':'15 to 17 years',
-                                        'S0101_C01_021M':'15 to 17 years Margin of Error',
-                                        'S0101_C01_022E':'Under 18 years',
-                                        'S0101_C01_022M':'Under 18 years Margin of Error',
-                                        'S0101_C01_023E':'18 to 24 years',
-                                        'S0101_C01_023M':'18 to 24 years Margin of Error',
-                                        'S0101_C01_024E':'15 to 44 years',
-                                        'S0101_C01_024M':'15 to 44 years Margin of Error',
-                                        'S0101_C01_025E':'16 years and over',
-                                        'S0101_C01_025M':'16 years and over Margin of Error',
-                                        'S0101_C01_026E':'18 years and over',
-                                        'S0101_C01_026M':'18 years and over Margin of Error',
-                                        'S0101_C01_027E':'21 years and over',
-                                        'S0101_C01_027M':'21 years and over Margin of Error',
-                                        'S0101_C01_028E':'60 years and over',
-                                        'S0101_C01_028M':'60 years and over Margin of Error',
-                                        'S0101_C01_029E':'62 years and over',
-                                        'S0101_C01_029M':'62 years and over Margin of Error',
-                                        'S0101_C01_030E':'65 years and over',
-                                        'S0101_C01_030M':'65 years and over Margin of Error',
-                                        'S0101_C01_031E':'75 years and over',
-                                        'S0101_C01_031M':'75 years and over Margin of Error',
-                                        'S0101_C01_032E':'Median age (years)',
-                                        'S0101_C01_032M':'Median age (years) Margin of Error',
-                                        'S0101_C01_033E':'Sex ratio (males per 100 females)',
-                                        'S0101_C01_033M':'Sex ratio (males per 100 females) Margin of Error',
-                                        'S0101_C01_034E':'Age dependency ratio',
-                                        'S0101_C01_034M':'Age dependency ratio Margin of Error',
-                                        'S0101_C01_035E':'Old-age dependency ratio',
-                                        'S0101_C01_035M':'Old-age dependency ratio Margin of Error',
-                                        'S0101_C01_036E':'Child dependency ratio',
-                                        'S0101_C01_036M':'Child dependency ratio Margin of Error'
-                                        })
+    age_data = age_data.rename(columns=age_col_dict)
     age_data = age_data.drop(columns=age_data.columns[age_data.columns.str.contains('S0101')])
     age_data['25 to 34 years'] = age_data.loc[0,['25 to 29 years','30 to 34 years']].sum()
     age_data['35 to 44 years'] = age_data.loc[0,['35 to 39 years','40 to 44 years']].sum()
@@ -228,6 +268,47 @@ def load_data():
                   )
     age_fig.update_xaxes(tickfont=dict(size=14))
     age_fig.update_layout(hovermode='x',showlegend=False)
+    
+    race_url = census_api_url+'?get=group(B03002)'+geography
+    race_data = pd.read_csv(race_url)
+    race_data = race_data.drop(columns=race_data.columns[race_data.columns.str.contains('A')])
+    race_data = race_data.drop(columns=['GEO_ID','state','county','county subdivision]','Unnamed: 89'])
+    race_data = race_data.rename(columns={'[["B03002_001E"':'Total Population (R&E)',
+                                          'B03002_001M':'Total Population (R&E) Margin of Error',
+                                          'B03002_003E':'White',
+                                          'B03002_003M':'White Margin of Error',
+                                          'B03002_004E':'Black or African American',
+                                          'B03002_004M':'Black or African American Margin of Error',
+                                          'B03002_005E':'American Indian and Alaska Native',
+                                          'B03002_005M':'American Indian and Alaska Native Margin of Error',
+                                          'B03002_006E':'Asian',
+                                          'B03002_006M':'Asian Margin of Error',
+                                          'B03002_007E':'Native Hawaiian and Other Pacific Islander',
+                                          'B03002_007M':'Native Hawaiian and Other Pacific Islander Margin of Error',
+                                          'B03002_008E':'Some other race',
+                                          'B03002_008M':'Some other race Margin of Error',
+                                          'B03002_009E':'Two or more races',
+                                          'B03002_009M':'Two or more races Margin of Error',
+                                          'B03002_012E':'Hispanic or Latino',
+                                          'B03002_012M':'Hispanic or Latino Margin of Error'})
+    race_data = race_data.drop(columns=race_data.columns[race_data.columns.str.contains('B03002')])
+    
+    race_cols = ['White','Hispanic or Latino','Asian',
+                 'Black or African American',
+                 'Two or more races','Some other race']
+    
+    race_fig = make_subplots(1,1)
+    race_fig.add_trace(go.Bar(x=race_data[race_cols].columns,
+                            y=race_data.loc[0,race_cols],
+                            #error_y=race_data.loc[0,race_data.columns[race_data.columns.str.contains('Margin of Error')]],
+                            name='People by Age Bracket'
+                            ))
+    race_fig.update_layout(title=dict(text='Number of People by Race and Ethnicity',font=dict(size=28)),
+                  yaxis=dict(title=dict(text='# People',font=dict(size=18)),
+                             tickfont=dict(size=14))
+                  )
+    race_fig.update_xaxes(tickfont=dict(size=14))
+    race_fig.update_layout(hovermode='x',showlegend=False)
     
     #Or S1501
     education_url = census_api_url+'?get=group(B15003)'+geography
@@ -343,19 +424,22 @@ def load_data():
                                                            'With a self-care difficulty':'Self-care difficulty',
                                                            'With an independent living difficulty':'Independent living difficulty'})
     
-    disability_fig = make_subplots(1,2,specs=[[{'type':'scatter'},{'type':'domain'}]],
-                                   subplot_titles=('People by Disability Type','Disability by Percent'))
+    disability_fig = make_subplots(2,1,specs=[[{'type':'domain'}],
+                                               [{'type':'scatter'}]],
+                                   subplot_titles=('Disability by Percent','People by Disability Type'))
+    disability_fig.add_trace(go.Pie(labels=disab.columns,values=disab.loc[0,:],
+                                    textinfo='label+percent'),row=1,col=1)
     disability_fig.add_trace(go.Bar(x=disab.columns,y=disab.loc[0,:]
                                     ),
-                             row=1,col=1)
-    disability_fig.add_trace(go.Pie(labels=disab.columns,values=disab.loc[0,:]
-                                    ),row=1,col=2)
-    disability_fig.update_layout(title=dict(text='Types of Disabilities',font=dict(size=28)),
+                             row=2,col=1)
+    
+    disability_fig.update_layout(title=dict(text='Types of Disabilities Experienced in Maynard',font=dict(size=28)),
                   yaxis=dict(title=dict(text='# People',font=dict(size=18)),
                              tickfont=dict(size=14))
                   )
     disability_fig.update_xaxes(tickfont=dict(size=14))
-    disability_fig.update_layout(hovermode='x',showlegend=False)
+    disability_fig.update_layout(hovermode='x',showlegend=False,
+                                 height=800)
     
     
     #B16004
@@ -512,17 +596,35 @@ def load_data():
     housing_cols = ['Married-couple family','Single parent',
                     'Householder living alone','Householder not living alone']
     
-    housing_fig = make_subplots(1,2)
+    # add own vs rent and cost of rent
+    renting_url = census_api_url+'?get=group(B25003)'+geography
+    renting_data = pd.read_csv(renting_url)
+    renting_data = renting_data.drop(columns=renting_data.columns[renting_data.columns.str.contains('A')])
+    renting_data = renting_data.drop(columns=['GEO_ID','state','county','county subdivision]'])
+    renting_data = renting_data.rename(columns={'[["B25003_001E"':'Total Households (Tenure)',
+                                                'B25003_001M':'Total Households (Tenure) Margin of Error',
+                                                'B25003_002E':'Owner occupied',
+                                                'B25003_002M':'Owner occupied Margin of Error',
+                                                'B25003_003E':'Renter occupied',
+                                                'B25003_003M':'Renter occupied Margin of Error'})
+    renting_data['Total Households (Tenure)'] = renting_data['Total Households (Tenure)'].str[2:-1].astype('int')
+        
+    housing_fig = make_subplots(2,1)
     housing_fig.add_trace(go.Bar(x=housing_data[housing_cols].columns,
                             y=housing_data.loc[0,housing_cols],
                             name='Households by Type'
-                            ))
+                            ),
+                          row=1,col=1)
     housing_fig.update_layout(title=dict(text='Number of Households by Type',font=dict(size=28)),
                   yaxis=dict(title=dict(text='# Households',font=dict(size=18)),
                              tickfont=dict(size=14))
                   )
     housing_fig.update_xaxes(tickfont=dict(size=14))
     housing_fig.update_layout(hovermode='x',showlegend=False)
+    
+    
+    # energy data, 
+    
     
     #B08301 Means of transportation to work
     #B08303 Travel time to work
@@ -593,7 +695,28 @@ def load_data():
     
     trans_time_cols = ['Less than 15 minutes','15 to 29 minutes','30 to 44 minutes','45 minutes or more']
     
-    transportation_fig = make_subplots(1,2)
+    # add # of cars available per household
+    transportation3_url = census_api_url+'?get=group(B08014)'+geography
+    transportation3_data = pd.read_csv(transportation3_url)
+    transportation3_data = transportation3_data.drop(columns=transportation3_data.columns[transportation3_data.columns.str.contains('A')])
+    transportation3_data = transportation3_data.drop(columns=['GEO_ID','state','county','county subdivision]'])
+    transportation3_data = transportation3_data.rename(columns={'[["B08014_001E"':'Total workers (Vehicles)',
+                                                                'B08014_001M':'Total workers (Vehicles) Margin of Error',
+                                                                'B08014_002E':'No vehicles available',
+                                                                'B08014_002M':'No vehicles available Margin of Error',
+                                                                'B08014_003E':'1 vehicle available',
+                                                                'B08014_003M':'1 vehicle available Margin of Error',
+                                                                'B08014_004E':'2 vehicles available',
+                                                                'B08014_004M':'2 vehicles available Margin of Error',
+                                                                'B08014_005E':'3 vehicles available',
+                                                                'B08014_005M':'3 vehicles available Margin of Error',
+                                                                'B08014_006E':'4 vehicles available',
+                                                                'B08014_006M':'4 vehicles available Margin of Error',
+                                                                'B08014_007E':'5 or more vehicles available',
+                                                                'B08014_007M':'5 or more vehicles available Margin of Error'})
+    transportation3_data = transportation3_data.drop(columns=transportation3_data.columns[transportation3_data.columns.str.contains('B08014')])
+    
+    transportation_fig = make_subplots(3,1)
     transportation_fig.add_trace(go.Bar(x=transportation_data[trans_means_cols].columns,
                             y=transportation_data.loc[0,trans_means_cols],
                             name='Commutes by Type'
@@ -601,7 +724,7 @@ def load_data():
     transportation_fig.add_trace(go.Bar(x=transportation2_data[trans_time_cols].columns,
                             y=transportation2_data.loc[0,trans_time_cols],
                             name='Commutes by Time'
-                            ),row=1,col=2)
+                            ),row=2,col=1)
     transportation_fig.update_layout(title=dict(text='Number of People by Commuting Characteristics',font=dict(size=28)),
                   yaxis=dict(title=dict(text='# People',font=dict(size=18)),
                              tickfont=dict(size=14)),
@@ -609,24 +732,36 @@ def load_data():
                              tickfont=dict(size=14))
                   )
     transportation_fig.update_xaxes(tickfont=dict(size=14))
-    transportation_fig.update_layout(hovermode='x',showlegend=False)
+    transportation_fig.update_layout(hovermode='x',showlegend=False,
+                                     height=1200)
     
-    data = pd.concat([income_data,med_inc_data,age_data,education_data,disability_data,language_data,housing_data,transportation_data],axis=1)    
+    data = pd.concat([income_data,med_inc_data,race_data,age_data,
+                      education_data,disability_data,language_data,
+                      housing_data,renting_data,transportation_data],axis=1)    
     
-    return data, income_fig, age_fig, edu_fig, disability_fig, language_fig, housing_fig, transportation_fig
+    return data, income_fig, income_map, race_fig, age_fig, edu_fig, disability_fig, language_fig, housing_fig, transportation_fig
 
-data, income_fig, age_fig, education_fig, disability_fig, language_fig, housing_fig, transportation_fig = load_data()
+data, income_fig, income_map, race_fig, age_fig, education_fig, disability_fig, language_fig, housing_fig, transportation_fig = load_data()
 
 with st.expander('Maynard, Environmental Justice and Income'):
-    st.write('Map of Maynard, census tracts, EJ info and income data will go here.')
-    st.write('Maynard has a population of '+str(data.loc[0,'Total Population'])+' people living in '+str(data.loc[0,'Total Households'])+' households.')
+    st.write('Maynard has a population of '+str('{:,}'.format(data.loc[0,'Total Population']))+' \
+             people living in '+str('{:,}'.format(data.loc[0,'Total Households']))+' households.')
     st.write('Maynard is composed of two census tracts and seven block groups. \
              One block group has been designated by the state as an environmental \
             justice community based on its median household income. Households \
             with lower incomes are more vulnerable to the impacts of climate change.')
+    st.image('images/Maynard EJ cropped.png',
+             caption='State-defined environmental justice census blocks in Maynard.',
+             width=300)
+    st.plotly_chart(income_map)
     #st.table(income_data[income_cols])
+    col1,col2 = st.columns(2)
+    with col1:
+        st.metric('Median Household Income','$'+str('{:,}'.format(data.loc[0,'Median Household Income'])))
+    with col2:
+        st.metric('Median Age',data.loc[0,'Median age (years)'])
     st.plotly_chart(income_fig)
-    st.write('Note: 2022 is the latest year data is available from the U.S. Census Bureau.\
+    st.write('Note: 2021 data from the U.S. Census Bureau is used for consistency with the state GEAR tool.\
              The U.S. Census Bureau uses two "tracts" and seven "block groups" \
             to represent the Town of Maynard. These are developed to create \
             areas across the country with similar amounts of people for \
@@ -635,25 +770,28 @@ with st.expander('Maynard, Environmental Justice and Income'):
 
 with st.expander('Race and Ethnicity in Maynard'):
     st.write('Racial and ethnicity data will go here.')
-
+    st.plotly_chart(race_fig)
 
 with st.expander('Education in Maynard'):
-    st.write('Data on educational attainment, school enrollment, high needs and other stats will go here.')
+    st.image('images/Maynard DESE.png',caption='Maynard Public School data from MA Department of Elementary and Secondary Education (DESE).')
     st.plotly_chart(education_fig)
 
 
 with st.expander('Disabilities in Maynard'):
-    st.write('Data on disabilities, maybe theres another way to approach this or other data to combine here?')
     st.plotly_chart(disability_fig)
 
 
 with st.expander('Languages in Maynard'):
     st.write('What languages do we speak in Maynard?')
-    st.plotly_chart(language_fig)
+    percent_limited_english = data.loc[0,'Limited English Proficiency']/data.loc[0,'Total Population']*100
+    st.metric('Percent of residents with limited English proficiency',str(percent_limited_english.round(2))+'%')
+    #st.plotly_chart(language_fig)
 
 
 with st.expander('Housing in Maynard'):
     st.write('Household types, housing cost and insecurity')
+    percent_renter = (data.loc[0,'Renter occupied']/data.loc[0,'Total Households (Tenure)']*100).round(2)
+    st.metric('Percent Households Renting',str(percent_renter)+'%')
     st.plotly_chart(housing_fig)
 
 
@@ -662,10 +800,14 @@ with st.expander('Food insecurity in Maynard'):
 
 
 with st.expander('Energy insecurity in Maynard'):
-    st.write('Energy consumption and insecurity data will go here')
+    st.image('images/Maynard Mass Save cropped.jpg',
+             caption='Maynard block groups ranked by participation in the \
+                 Mass Save program for energy efficiency. Darker colors signal \
+                     lower rates of participation.',
+                     width=400)
+    #st.write('Areas in Maynard with more rental properties have lower rates of participation.')
 
 
 with st.expander('Transportation in Maynard'):
-    st.write('Transporation access, burden, commuting and other data will go here.')
     st.plotly_chart(transportation_fig)
 
